@@ -1,0 +1,74 @@
+seed: ${..seed}
+algo: SHAC
+
+print_every: 1
+ckpt_every: 100
+
+network:
+
+  normalize_input: True
+  encoder: null
+  encoder_kwargs:
+    weight_init_pcd: orthogonalg1
+    weight_init_mlp: orthogonalg1
+
+  actor: Actor
+  actor_kwargs:
+    weight_init_last_layers: False
+    weight_init: orthogonalg1
+    mlp_kwargs:
+      units: [256, 128]
+      norm_type: LayerNorm
+      act_type: ELU
+    dist_kwargs: {dist_type: squashed_normal, minlogstd: -5.0, maxlogstd: 2.0}
+    fixed_sigma: False
+  tanh_clamp: False
+
+  critic: EnsembleCritic
+  critic_kwargs:
+    weight_init: orthogonalg1
+    mlp_kwargs:
+      units: [256, 128]
+      norm_type: LayerNorm
+      act_type: ELU
+    n_critics: 2
+
+shac:
+  multi_gpu: ${...multi_gpu}
+  num_actors: ${...task.env.numEnvs}
+
+  reward_shaper:
+    fn: scale
+    scale: 1.0
+
+  max_epochs: 6000
+  max_agent_steps: 6.2e6
+  # max_epochs: 4000
+  # max_agent_steps: 4.1e6
+  # max_epochs: 2000
+  # max_agent_steps: 2.05e6
+
+  horizon_len: 32
+  num_critic_batches: 8
+
+  gamma: 0.99
+  critic_method: td-lambda  # td-lambda | one-step
+  lambda: 0.95
+  critic_iterations: 16
+  normalize_ret: False
+
+  optim_type: AdamW
+  actor_optim_kwargs: {lr: 5e-4, betas: [0.7, 0.95]}
+  critic_optim_kwargs: {lr: 2e-3, betas: [0.7, 0.95]}
+  lr_schedule: linear  # linear | constant
+  target_critic_alpha: 0.995 # float (e.g. 0.9) | null when no_target_critic is False | True
+  max_grad_norm: 0.5
+  truncate_grads: True
+
+  no_target_critic: False # False | True
+  actor_loss_avgcritics: True
+
+  actor_detach_encoder: False
+  critic_detach_encoder: False
+  share_encoder: False
+
